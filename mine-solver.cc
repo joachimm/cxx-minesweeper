@@ -27,19 +27,20 @@ bool solve()
 	size_t lenY = 20;
 	size_t numMines = 50;
 	size_t numSquares = lenX * lenY;
+	size_t numRows = numSquares + 1;
 	std::vector<std::vector<bool> > known_mines(lenX, std::vector<bool>(lenY, false));
 	minesweeper_t game(lenX, lenY, numMines);
 	int guessX = 0;
 	int guessY = 0;
 	while(game.play(guessX, guessY))
 	{
-	  // Assembly:
-	  Vector b(numSquares + 1);// the right hand side-vector resulting from the constraints
-		
+		// Assembly:
+		Vector b(numRows);// the right hand side-vector resulting from the constraints
+
 		draw_board(game, false, std::cout);
-	  matrix_t A(numSquares + 1, numSquares);
+		matrix_t A(numRows, numSquares);
 		A.setZero();
-	
+
 		int ordinal = 0;
 		for(int y = 0; y < game.getLengthY(); ++y)
 		{
@@ -64,7 +65,7 @@ bool solve()
 					// Start the walk around this square in upper left square
 					int startX = x - 1;
 					int startY = y - 1;
-	
+
 					for(auto const pos : adjacent)
 					{
 						int circleX = startX + pos.x;
@@ -79,24 +80,25 @@ bool solve()
 						}
 					}
 					b(ordinal) = surrounding_bombs;
-	
+
 				}
 				++ordinal;
 			}
 		}
-	
+
+		// Add a final row with all coefficients set to 1
 		for(int i = 0; i < numSquares ; ++i)
 		{
 			A(ordinal, i) = 1;
 		}
 		b(ordinal) = numMines;
 
-	  // Solving:
-	  Eigen::JacobiSVD<matrix_t> solver;  // performs a SVD factorization of A
+		// Solving:
+		Eigen::JacobiSVD<matrix_t> solver;  // performs a SVD factorization of A
 		solver.compute(A, Eigen::ComputeThinU | Eigen::ComputeThinV);
 
 		Vector xVec = solver.solve(b);
-		
+
 		int oldGuessX = guessX;
 		int oldGuessY = guessY;
 		numdef previous = 1;
@@ -133,5 +135,5 @@ int main(int argc, char** argv)
 	{
 		std::cout<< "Ouch!! Better luck next time" << std::endl;
 	}
-  return 0;
+	return 0;
 }

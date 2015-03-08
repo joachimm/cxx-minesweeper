@@ -34,8 +34,6 @@ void play(minesweeper_t& game)
 	}
 
 	draw_board(game, true, std::cout);
-	
-	
 }
 
 minesweeper_t startGame()
