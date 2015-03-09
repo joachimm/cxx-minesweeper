@@ -18,6 +18,16 @@ std::vector<position_t> const adjacent = {
 	{0,2}, {1,2}, {2,2}
 };
 
+int num_revealed(minesweeper_t const& game)
+{
+	int numRows = 0;
+	for(int y = 0; y < game.getLengthY(); ++y)
+		for(int x = 0; x < game.getLengthX(); ++x)
+			if(game.is_revealed(x, y))
+				++numRows;
+	return numRows;
+}
+
 bool solve()
 {
 	typedef double numdef;
@@ -27,7 +37,6 @@ bool solve()
 	size_t lenY = 20;
 	size_t numMines = 50;
 	size_t numSquares = lenX * lenY;
-	size_t numRows = numSquares + 1;
 	std::vector<std::vector<bool> > known_mines(lenX, std::vector<bool>(lenY, false));
 	minesweeper_t game(lenX, lenY, numMines);
 	int guessX = 0;
@@ -35,11 +44,15 @@ bool solve()
 	while(game.play(guessX, guessY))
 	{
 		// Assembly:
-		Vector b(numRows);// the right hand side-vector resulting from the constraints
 
 		draw_board(game, false, std::cout);
+		// we try to keep the matrix as small as possible for speed reasons
+		int numRows = num_revealed(game);
+		// add one for all coefficients add up to num mines
+		++numRows;
 		matrix_t A(numRows, numSquares);
 		A.setZero();
+		Vector b(numRows);// the right hand side-vector resulting from the constraints
 
 		int ordinal = 0;
 		for(int y = 0; y < game.getLengthY(); ++y)
@@ -49,6 +62,7 @@ bool solve()
 				// Only look at revealed boards, otherwise we cheat
 				if(game.is_revealed(x, y))
 				{
+
 					auto state = game.get_mined_state(x, y);
 					size_t surrounding_bombs = 0;
 					switch(state)
@@ -75,14 +89,13 @@ bool solve()
 						{
 							int xOffset = pos.x - 1;
 							int yOffset = lenX * (pos.y - 1); // yes lenX for y value offset
-							int actual = (ordinal + xOffset) + yOffset;
+							int actual = (y * lenX + x + xOffset) + yOffset;
 							A(ordinal, actual) = 1;
 						}
 					}
 					b(ordinal) = surrounding_bombs;
-
-				}
-				++ordinal;
+					++ordinal;
+				} // if
 			}
 		}
 
@@ -119,7 +132,7 @@ bool solve()
 				guessY = y;
 			}
 		}
-		std::cout << std::endl << "will play x:" << guessX << " y:" << guessY << " with " << (1.0 - fabs(previous) ) * 100.0 << "% weight" << std::endl;
+		std::cout << std::endl << "will play x:" << guessX << " y:" << guessY << " with weight " << (1.0 - fabs(previous) ) * 100.0 << "% matrix rows:" << numRows << std::endl;
 	}
 	draw_board(game, true, std::cout);
 	return game.is_won();
